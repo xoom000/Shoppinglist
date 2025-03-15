@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Modern Shopping List</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Roboto', sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .table th, .table td {
+      vertical-align: middle;
+    }
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1080;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">My Shopping List</h1>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-striped align-middle" id="shopping-table">
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Price (USD)</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Subtotal</th>
+              <th scope="col">Remove</th>
+            </tr>
+          </thead>
+          <tbody id="shopping-tbody">
+            <!-- Items will be inserted dynamically -->
+          </tbody>
+        </table>
+        <div class="d-flex justify-content-end align-items-center">
+          <h4 class="me-3">Total: $<span id="total-amount">0.00</span></h4>
+          <button class="btn btn-success" onclick="checkout()">
+            <i class="fas fa-credit-card"></i> Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container for notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Sample shopping list data
+    const shoppingItems = [
+      { name: "Fanta Orange Fruit Soda Pop, 2 Liter Bottle", price: 1.88, quantity: 1 },
+      { name: "Barq's Root Beer Soda Pop, 2 Liter Bottle", price: 1.88, quantity: 1 },
+      { name: "Sprite Zero Sugar Lemon Lime Soda Pop, 2 Liter Bottle", price: 2.74, quantity: 1 },
+      { name: "Crystal Light Peach Mango Green Tea", price: 2.92, quantity: 1 },
+      { name: "Skittles Original Chewy Candy, Family Size (27.5 oz)", price: 8.00, quantity: 1 },
+      { name: "Freshness Guaranteed Assorted Spring Cookies (24 ct)", price: 6.74, quantity: 1 },
+      { name: "Freshness Guaranteed 9\" Carrot Cake w/ Cream Cheese Icing", price: 5.98, quantity: 1 },
+      { name: "Great Value Birthday Party Candle, Number 4", price: 1.12, quantity: 1 },
+      { name: "Freshness Guaranteed Spring Marshmallow Treat (24 Count)", price: 5.98, quantity: 1 },
+      { name: "Frez Grapefruit Citrus Soda Water Pop (8 pack)", price: 2.98, quantity: 1 },
+      { name: "Kraft Mozzarella Shredded Cheese (16 oz)", price: 5.96, quantity: 1 },
+      { name: "Marketside Caesar Salad Kit (11.5 oz)", price: 3.48, quantity: 1 },
+      { name: "Banza Four Cheese Pizza from Chickpeas", price: 7.86, quantity: 1 },
+      { name: "Red Baron Pepperoni Brick Oven Pizza", price: 14.46, quantity: 1 }
+    ];
+
+    const tableBody = document.getElementById("shopping-tbody");
+    const totalAmount = document.getElementById("total-amount");
+    const toastContainer = document.getElementById("toast-container");
+
+    // Render the shopping list table rows
+    function renderShoppingList() {
+      tableBody.innerHTML = "";
+      shoppingItems.forEach((item, index) => {
+        const row = document.createElement("tr");
+
+        // Item Name
+        const nameCell = document.createElement("td");
+        nameCell.textContent = item.name;
+        row.appendChild(nameCell);
+
+        // Price
+        const priceCell = document.createElement("td");
+        priceCell.textContent = item.price.toFixed(2);
+        row.appendChild(priceCell);
+
+        // Quantity with input control
+        const quantityCell = document.createElement("td");
+        const quantityInput = document.createElement("input");
+        quantityInput.type = "number";
+        quantityInput.value = item.quantity;
+        quantityInput.min = "1";
+        quantityInput.className = "form-control";
+        quantityInput.style.maxWidth = "80px";
+        quantityInput.addEventListener("change", () => {
+          const newQuantity = parseInt(quantityInput.value);
+          item.quantity = newQuantity < 1 ? 1 : newQuantity;
+          updateTotal();
+          renderShoppingList();
+          showToast("Updated quantity for " + item.name);
+        });
+        quantityCell.appendChild(quantityInput);
+        row.appendChild(quantityCell);
+
+        // Subtotal
+        const subtotalCell = document.createElement("td");
+        subtotalCell.textContent = (item.price * item.quantity).toFixed(2);
+        row.appendChild(subtotalCell);
+
+        // Remove button with trash icon
+        const removeCell = document.createElement("td");
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "btn btn-danger";
+        removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        removeBtn.addEventListener("click", () => {
+          const removedItem = shoppingItems.splice(index, 1)[0];
+          renderShoppingList();
+          updateTotal();
+          showToast("Removed " + removedItem.name);
+        });
+        removeCell.appendChild(removeBtn);
+        row.appendChild(removeCell);
+
+        tableBody.appendChild(row);
+      });
+      updateTotal();
+    }
+
+    // Update the overall total
+    function updateTotal() {
+      let total = 0;
+      shoppingItems.forEach(item => {
+        total += item.price * item.quantity;
+      });
+      totalAmount.textContent = total.toFixed(2);
+    }
+
+    // Checkout function with a notification
+    function checkout() {
+      showToast("Proceeding to checkout with total: $" + totalAmount.textContent);
+      // Here you can add your checkout logic (e.g., redirect or open a modal)
+    }
+
+    // Function to display toast notifications
+    function showToast(message) {
+      const toastId = "toast" + Date.now();
+      const toastElement = document.createElement("div");
+      toastElement.className = "toast align-items-center text-bg-primary border-0";
+      toastElement.id = toastId;
+      toastElement.setAttribute("role", "alert");
+      toastElement.setAttribute("aria-live", "assertive");
+      toastElement.setAttribute("aria-atomic", "true");
+      toastElement.style.minWidth = "250px";
+
+      toastElement.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      toastContainer.appendChild(toastElement);
+
+      const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
+      bsToast.show();
+
+      // Remove toast element after it hides
+      toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+      });
+    }
+
+    // Initialize the shopping list on page load
+    renderShoppingList();
+  </script>
+</body>
+</html>
